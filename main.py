@@ -69,6 +69,8 @@ def processing(circles,path):
     if circles is not None:
         circles = np.round(circles[0, :]).astype("int")
         # print(circles)
+        circles = filtered_circles(circles)
+
         for (x, y, r) in circles:
             totalCirclesDetected+=1
             # Draw the circle and its center
@@ -86,10 +88,30 @@ def processing(circles,path):
         print("No circles detected.")
 
 
+def circles_overlap(c1, c2, overlap_threshold):
+    (x1, y1, r1) = c1
+    (x2, y2, r2) = c2
+    distance = np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+    return distance < (r1 + r2) * overlap_threshold
+
+
+def filtered_circles(circles):
+    overlap_threshold = 0.8  # less than 1 means that circles can overlap
+    filtered_circles = []
+    for (x, y, r) in circles:
+        overlap = False
+        for (x2, y2, r2) in filtered_circles:
+            if circles_overlap((x, y, r), (x2, y2, r2), overlap_threshold):
+                overlap = True
+                break
+        if not overlap:
+            filtered_circles.append((x, y, r))
+    return filtered_circles
+
 def main():
     path = "pakistani_coins.jpeg"
     path = "coins.jpg"
-    # path = "coins3.jpeg"
+    path = "coins3.jpeg"
     circles = preprocessing(path)
     processing(circles,path)
 
