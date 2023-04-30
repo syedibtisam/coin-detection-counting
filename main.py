@@ -62,13 +62,8 @@ def preprocessing(img):
 
 def load_template(coin_value):
     template = cv2.imread(f"coin_{coin_value}.jpg", cv2.IMREAD_GRAYSCALE)
-    template = cv2.GaussianBlur(template, (5, 5), 0)
-    # _, template_thresh = cv2.threshold(template, 128, 255, cv2.THRESH_BINARY_INV)
-    # template_thresh = adaptiveThresholding(template)
-    template_thresh = template
-    moments = cv2.moments(template_thresh)
-    hu_moments = cv2.HuMoments(moments)
-    return hu_moments
+    # template = cv2.GaussianBlur(template, (5, 5), 0)
+    return calculate_hu_moments(template)
 
 
 def detecting_circles(preprocessedImage,path):
@@ -126,24 +121,6 @@ def extract_coin_shape(gray_image, center, radius): # input blurred image from p
     return gray_image[y - r : y + r, x - r : x + r]
 
 
-def compute_hu_moments(coin_shape):
-    _, coin_thresh = cv2.threshold(coin_shape, 128, 255, cv2.THRESH_BINARY_INV)
-    moments = cv2.moments(coin_thresh)
-    hu_moments = cv2.HuMoments(moments)
-    return hu_moments
-
-
-def match_coin_value(coin_hu_moments, templates, threshold=1e-5):
-    best_value, best_score = None, 1e10
-    for value, template_hu_moments in templates.items():
-        score = np.sum(np.abs((coin_hu_moments - template_hu_moments) / template_hu_moments))
-        if score < best_score and score < threshold:
-            best_value, best_score = value, score
-    return best_value
-
-
-
-
 def coins_matching(circles,preprocessedImage):
     templates = {
     1: load_template(1),
@@ -155,15 +132,35 @@ def coins_matching(circles,preprocessedImage):
     total_amount = 0
     for (x, y, r) in circles:
         coin_shape = extract_coin_shape(preprocessedImage, (x, y), r)
-        coin_hu_moments = compute_hu_moments(coin_shape)
-        coin_value = match_coin_value(coin_hu_moments, templates)
+        display_image("coin",coin_shape)
+        coin_moments = calculate_hu_moments(coin_shape)
+        print("-----------")
+        for value, template_hu_moments in templates.items():
+            distance = compute_distance_btw_moments(coin_moments,template_hu_moments)
+            print("Coin: ",value,distance)
+        # coin_hu_moments = compute_hu_moments(coin_shape)
+        # coin_value = match_coin_value(coin_hu_moments, templates)
 
-        if coin_value is not None:
-            total_amount += coin_value
-            print(f"Detected coin: {coin_value}")
+        # if coin_value is not None:
+        #     total_amount += coin_value
+        #     print(f"Detected coin: {coin_value}")
 
     print(f"Total amount: {total_amount}")
 
+
+def calculate_hu_moments(grayscale_image):
+    # Load the images of the extracted coin and the reference coin
+    # coin1 = cv2.imread('coin2.png', cv2.IMREAD_GRAYSCALE)
+
+    # Calculate the Hu moments of the extracted coin
+    moments1 = cv2.moments(grayscale_image)
+    huMoments1 = cv2.HuMoments(moments1)
+    return huMoments1
+
+def compute_distance_btw_moments(m1,m2):
+    # Calculate the Euclidean distance between the Hu moments
+    distance = np.sqrt(np.sum((m1 - m2) ** 2))
+    return distance
 
 
 def main():
@@ -177,8 +174,12 @@ def main():
     # detecting the circles
     circles = detecting_circles(preprocessedImage,path)
     
+    image = load_Image_In_Gray(path)
+    # Apply adaptive thresholding
+    image = adaptiveHistogramProcessing(image)
+
     # coins matching
-    coins_matching(circles,preprocessedImage)
+    coins_matching(circles,image)
 
 def display_image(imageDisplayName,img):
     cv2.imshow(imageDisplayName, img)
