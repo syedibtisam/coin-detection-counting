@@ -3,7 +3,7 @@ import numpy as np
 
 # Load the images of the extracted coin and the reference coin
 coin1 = cv2.imread('coin_1.jpg', cv2.IMREAD_GRAYSCALE)
-coin2 = cv2.imread('coin_1.jpg', cv2.IMREAD_GRAYSCALE)
+coin2 = cv2.imread('coin_1_1.jpeg', cv2.IMREAD_GRAYSCALE)
 
 # Calculate the Hu moments of the extracted coin
 moments1 = cv2.moments(coin1)
