@@ -57,18 +57,27 @@ def preprocessing(img):
     # Apply Canny edge detection
     # image = cannyEdge(image)
 
+    return image
+
+
+def load_template(coin_value):
+    template = cv2.imread(f"coin_{coin_value}.jpg", cv2.IMREAD_GRAYSCALE)
+    template = cv2.GaussianBlur(template, (5, 5), 0)
+    # _, template_thresh = cv2.threshold(template, 128, 255, cv2.THRESH_BINARY_INV)
+    # template_thresh = adaptiveThresholding(template)
+    template_thresh = template
+    moments = cv2.moments(template_thresh)
+    hu_moments = cv2.HuMoments(moments)
+    return hu_moments
+
+
+def detecting_circles(preprocessedImage,path):
     # Apply Hough Circle Transform to detect circles
-    circles = houghCircle(image)
-    # print(circles)
-    return circles
-
-
-def processing(circles,path):
+    circles = houghCircle(preprocessedImage)
     image = cv2.imread(path)
     totalCirclesDetected = 0
     if circles is not None:
         circles = np.round(circles[0, :]).astype("int")
-        # print(circles)
         circles = filtered_circles(circles)
 
         for (x, y, r) in circles:
@@ -78,7 +87,7 @@ def processing(circles,path):
             cv2.circle(image, (x, y), 1, (0, 0, 255), 2)
 
             # Print the detected circle's center and radius
-            print(f"Circle center: ({x}, {y}), Radius: {r}")
+            # print(f"Circle center: ({x}, {y}), Radius: {r}")
 
         # Display the output image
         cv2.imshow("Detected Circles", image)
@@ -86,6 +95,8 @@ def processing(circles,path):
         print("total Circles Detected:",totalCirclesDetected)
     else:
         print("No circles detected.")
+    # print(circles)
+    return circles
 
 
 def circles_overlap(c1, c2, overlap_threshold):
@@ -108,12 +119,66 @@ def filtered_circles(circles):
             filtered_circles.append((x, y, r))
     return filtered_circles
 
+
+def extract_coin_shape(gray_image, center, radius): # input blurred image from preprocessing
+    x, y = center
+    r = int(radius * 1.1)
+    return gray_image[y - r : y + r, x - r : x + r]
+
+
+def compute_hu_moments(coin_shape):
+    _, coin_thresh = cv2.threshold(coin_shape, 128, 255, cv2.THRESH_BINARY_INV)
+    moments = cv2.moments(coin_thresh)
+    hu_moments = cv2.HuMoments(moments)
+    return hu_moments
+
+
+def match_coin_value(coin_hu_moments, templates, threshold=1e-5):
+    best_value, best_score = None, 1e10
+    for value, template_hu_moments in templates.items():
+        score = np.sum(np.abs((coin_hu_moments - template_hu_moments) / template_hu_moments))
+        if score < best_score and score < threshold:
+            best_value, best_score = value, score
+    return best_value
+
+
+
+
+def coins_matching(circles,preprocessedImage):
+    templates = {
+    1: load_template(1),
+    2: load_template(2),
+    5: load_template(5),
+    10: load_template(10),
+    }
+
+    total_amount = 0
+    for (x, y, r) in circles:
+        coin_shape = extract_coin_shape(preprocessedImage, (x, y), r)
+        coin_hu_moments = compute_hu_moments(coin_shape)
+        coin_value = match_coin_value(coin_hu_moments, templates)
+
+        if coin_value is not None:
+            total_amount += coin_value
+            print(f"Detected coin: {coin_value}")
+
+    print(f"Total amount: {total_amount}")
+
+
+
 def main():
     path = "pakistani_coins.jpeg"
-    path = "coins.jpg"
-    path = "coins3.jpeg"
-    circles = preprocessing(path)
-    processing(circles,path)
+    # path = "coins.jpg"
+    # path = "coins3.jpeg"
+
+    # preprocessing
+    preprocessedImage = preprocessing(path)
+
+    # detecting the circles
+    circles = detecting_circles(preprocessedImage,path)
+    
+    # coins matching
+    coins_matching(circles,preprocessedImage)
 
 def display_image(imageDisplayName,img):
     cv2.imshow(imageDisplayName, img)
