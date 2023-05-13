@@ -2,10 +2,9 @@ import cv2
 import numpy as np
 from sklearn import svm, model_selection
 from skimage.feature import hog
-from skimage import color
 import os
 import glob
-
+import joblib
 
 clf = svm.SVC(decision_function_shape='ovo')
 
@@ -106,13 +105,15 @@ def training_coins_database(path,clf):
     # Create and train an SVM
     # clf = svm.SVC(decision_function_shape='ovo')
     clf.fit(X_train, y_train)
-
+    # Save the trained model to disk
+    joblib.dump(clf, 'svm_model.pkl')
     
 # The path to your coin images, organized into subdirectories by denomination
 data_dir = 'coins/'
 path = "test_coin11.jpeg"
 training_coins_database(data_dir,clf)
-preprocessedImage = preprocessed_input_coin_image(path)
-predicted_class = predict_coin(preprocessedImage)
-print(f"Predicted class: {predicted_class}")
+
+# preprocessedImage = preprocessed_input_coin_image(path)
+# predicted_class = predict_coin(preprocessedImage)
+# print(f"Predicted class: {predicted_class}")
 

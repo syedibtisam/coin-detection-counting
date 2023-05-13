@@ -1,24 +1,50 @@
 import cv2
 import numpy as np
+from sklearn import svm, model_selection
+from skimage.feature import hog
+
+import joblib
+
+
+clf = svm.SVC(decision_function_shape='ovo')
+
+
+def predict_coin(grayImage):
+    # Extract HOG features from the preprocessed image
+    input_features = hog(grayImage, orientations=11,
+                         pixels_per_cell=(12, 12), cells_per_block=(1, 1))
+    # input_features = scaler.transform(input_features)
+    input_features = input_features.reshape(1, -1)
+    # Later, when you want to make predictions, load the model from disk
+    loaded_model = joblib.load('svm_model.pkl')
+
+    # Use the loaded model to make predictions
+    predicted_class = loaded_model.predict(input_features)
+    # predicted_class = clf.predict(input_features)
+    return predicted_class
+
 
 def adaptive_thresholding(grayImage):
     # Adaptive thresholding in order to present better results
     maximum_value_to_assign = 255
     local_neighbourhood_window = 9
-    adjust_contrast = 3 # to subtract from mean value 
-    return cv2.adaptiveThreshold(grayImage, 
-                                  maximum_value_to_assign, 
-                                  cv2.ADAPTIVE_THRESH_MEAN_C, 
-                                  cv2.THRESH_BINARY_INV, 
-                                  local_neighbourhood_window, 
-                                  adjust_contrast)
+    adjust_contrast = 3  # to subtract from mean value
+    return cv2.adaptiveThreshold(grayImage,
+                                 maximum_value_to_assign,
+                                 cv2.ADAPTIVE_THRESH_MEAN_C,
+                                 cv2.THRESH_BINARY_INV,
+                                 local_neighbourhood_window,
+                                 adjust_contrast)
+
 
 def adaptive_histogram_processing(grayImage):
     # Local Histogram processing to enhance the image locally by dividing into small segments
     contrast_limiting_threshold = 3.0
-    ahp = cv2.createCLAHE(clipLimit=contrast_limiting_threshold, tileGridSize=(8,8))
+    ahp = cv2.createCLAHE(
+        clipLimit=contrast_limiting_threshold, tileGridSize=(8, 8))
     # Applying to grayscale image
     return ahp.apply(grayImage)
+
 
 def load_image_in_gray(path):
     try:
@@ -29,20 +55,15 @@ def load_image_in_gray(path):
     except Exception as e:
         print('Error:', e)
     return None
-    
+
 
 def gaussian_blur(grayImage):
     # gaussian blur, to reduce noise in the image
     controlBlurness = 0
     kernel_size = 15
-    blur = cv2.GaussianBlur(grayImage, (kernel_size,kernel_size), controlBlurness)
+    blur = cv2.GaussianBlur(
+        grayImage, (kernel_size, kernel_size), controlBlurness)
     return blur
-
-def canny_edge(gaussianBlurred):
-    lower_threshold = 30 # discard when lower this
-    higher_threshold = 130 # strong edges when higher this
-    edges = cv2.Canny(gaussianBlurred, lower_threshold, higher_threshold)
-    return edges
 
 
 def hough_circle(blurred_image):
@@ -50,18 +71,12 @@ def hough_circle(blurred_image):
         blurred_image,
         cv2.HOUGH_GRADIENT,
         dp=1,
-        minDist=10, # minimum distance between center of detected circles
-        param1=50, # to detect edge, canny edge
-        param2=35, # smaller value, results in false circles
-        minRadius=10, # min radius of circle to detect
-        maxRadius=120, # max radius of circle to detect
+        minDist=10,  # minimum distance between center of detected circles
+        param1=50,  # to detect edge, canny edge
+        param2=35,  # smaller value, results in false circles
+        minRadius=10,  # min radius of circle to detect
+        maxRadius=120,  # max radius of circle to detect
     )
-
-
-def preprocessed_input_coin_image(image):
-    input_image_gray = preprocessing(image)
-    input_image_gray = cv2.resize(input_image_gray, (128, 128))
-    return input_image_gray
 
 
 def preprocessing(img):
@@ -83,47 +98,36 @@ def preprocessing(img):
     return None
 
 
-def calculate_coins_hu_moments():
-    coins_hu={}
-    coins = [1,2,5,10]
-    for i in range(4):
-        if coins[i] == 1:
-            local = cv2.imread(f"coin_{coins[i]}.jpeg", cv2.IMREAD_GRAYSCALE)
-        else:
-            local = cv2.imread(f"coin_{coins[i]}.jpg", cv2.IMREAD_GRAYSCALE)
-        coins_hu[coins[i]] = calculate_hu_moments(local)
-
-    return coins_hu
-
-
-def detecting_circles(preprocessedImage,path):
+def detecting_circles(preprocessedImage, path):
     # Used Hough transform function to find out all the circles in the image
     try:
         circles = hough_circle(preprocessedImage)
         image = cv2.imread(path)
         totalCirclesDetected = 0
         if circles is not None:
-            circles = np.round(circles[0, :]).astype("int") # rounding to nearest integer and converting to int
+            # rounding to nearest integer and converting to int
+            circles = np.round(circles[0, :]).astype("int")
             circles = filtered_circles(circles)
 
             for (x, y, r) in circles:
-                totalCirclesDetected+=1
+                totalCirclesDetected += 1
                 # Draw the circle and its center
                 cv2.circle(image, (x, y), r, (0, 0, 255), 2)
                 cv2.circle(image, (x, y), 1, (255, 0, 0), 2)
 
             # Display the output image
-            cv2.imshow("Detected Circles", image)
-            cv2.waitKey(0)
-            print("total Circles Detected:",totalCirclesDetected)
+            # cv2.imshow("Detected Circles", image)
+            # cv2.waitKey(0)
+            print("total Circles Detected:", totalCirclesDetected)
         else:
             print("No circles detected.")
         # print(circles)
-        
+
         return circles
     except Exception as e:
         print('Error:', e)
         return "Error"
+
 
 def circles_overlap(circle1, circle2, overlap_threshold):
     (x1, y1, r1) = circle1
@@ -146,37 +150,28 @@ def filtered_circles(circles):
     return filtered_circles
 
 
-def extract_coin_shape(gray_image, center, radius): # input blurred image from preprocessing
+# input blurred image from preprocessing
+def extract_coin_shape(gray_image, center, radius):
     x, y = center
     r = int(radius * 1.1)
-    return gray_image[y - r : y + r, x - r : x + r]
+    return gray_image[y - r: y + r, x - r: x + r]
 
 
-def coins_matching(circles,preprocessedImage):
-    coins_hu_moments = calculate_coins_hu_moments()
-
-    total_amount = 0
+def coins_matching(circles, preprocessedImage):
+    total = 0
     for (x, y, r) in circles:
         coin_shape = extract_coin_shape(preprocessedImage, (x, y), r)
-        display_image("coin",coin_shape)
-        print("size:",coin_shape.shape[0],coin_shape.shape[1])
-        # coin_moments = calculate_hu_moments(coin_shape)
-        # print("-----------")
-        # for value, template_hu_moments in coins_hu_moments.items():
-        #     distance = compute_distance_btw_moments(coin_moments,template_hu_moments)
-        #     if value == 10:
-        #         print("Coin:",value,'{:.20f}'.format(distance))
-        #     else:
-        #         print("Coin:",str(value)+" ",'{:.20f}'.format(distance))
+        # display_image("coin",coin_shape)
+        input_image_gray = cv2.resize(coin_shape, (128, 128))
+        predicted_class = predict_coin(input_image_gray)
+        print(f"Predicted class: {predicted_class}")
+        if predicted_class[0].isdigit():
+            total += int(predicted_class[0])
+
+    return total
 
 
-
-def calculate_hu_moments(grayscale_image):
-    # Calculate the Hu moments of the extracted coin
-    moments = cv2.moments(grayscale_image)
-    return cv2.HuMoments(moments)
-
-def compute_distance_btw_moments(m1,m2):
+def compute_distance_btw_moments(m1, m2):
     # Euclidean distance between the Hu moments
     return np.sqrt(np.sum((m1 - m2) ** 2))
 
@@ -185,13 +180,11 @@ def main():
     path = "pakistani_coins.jpeg"
     path = "coins.jpg"
     path = "coins3.jpeg"
-    # path = "coins2.jpg"
-
-    # preprocessing
+    total = 0
     preprocessedImage = preprocessing(path)
     if preprocessedImage is not None:
         # detecting the circles
-        circles = detecting_circles(preprocessedImage,path)
+        circles = detecting_circles(preprocessedImage, path)
         if circles == "Error":
             print("error occurred")
         elif circles is None:
@@ -201,13 +194,16 @@ def main():
             image = load_image_in_gray(path)
             # Apply adaptive thresholding
             image = adaptive_histogram_processing(image)
-            coins_matching(circles,image)
+            total = coins_matching(circles, image)
+            print("total :", total)
     else:
         print("failed to preprocess image")
 
-def display_image(imageDisplayName,img):
+
+def display_image(imageDisplayName, img):
     cv2.imshow(imageDisplayName, img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+
 
 main()
