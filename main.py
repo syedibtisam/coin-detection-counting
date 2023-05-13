@@ -58,6 +58,12 @@ def hough_circle(blurred_image):
     )
 
 
+def preprocessed_input_coin_image(image):
+    input_image_gray = preprocessing(image)
+    input_image_gray = cv2.resize(input_image_gray, (128, 128))
+    return input_image_gray
+
+
 def preprocessing(img):
     try:
         image = load_image_in_gray(img)
@@ -153,14 +159,15 @@ def coins_matching(circles,preprocessedImage):
     for (x, y, r) in circles:
         coin_shape = extract_coin_shape(preprocessedImage, (x, y), r)
         display_image("coin",coin_shape)
-        coin_moments = calculate_hu_moments(coin_shape)
-        print("-----------")
-        for value, template_hu_moments in coins_hu_moments.items():
-            distance = compute_distance_btw_moments(coin_moments,template_hu_moments)
-            if value == 10:
-                print("Coin:",value,'{:.20f}'.format(distance))
-            else:
-                print("Coin:",str(value)+" ",'{:.20f}'.format(distance))
+        print("size:",coin_shape.shape[0],coin_shape.shape[1])
+        # coin_moments = calculate_hu_moments(coin_shape)
+        # print("-----------")
+        # for value, template_hu_moments in coins_hu_moments.items():
+        #     distance = compute_distance_btw_moments(coin_moments,template_hu_moments)
+        #     if value == 10:
+        #         print("Coin:",value,'{:.20f}'.format(distance))
+        #     else:
+        #         print("Coin:",str(value)+" ",'{:.20f}'.format(distance))
 
 
 
@@ -178,7 +185,7 @@ def main():
     path = "pakistani_coins.jpeg"
     path = "coins.jpg"
     path = "coins3.jpeg"
-    path = "coins2.jpg"
+    # path = "coins2.jpg"
 
     # preprocessing
     preprocessedImage = preprocessing(path)
