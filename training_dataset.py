@@ -71,22 +71,20 @@ def predict_coin(grayImage):
     return predicted_class
 
 
-def training_coins_database(path,clf):
-    # The path to your coin images, organized into subdirectories by denomination
-    # A list to hold the features and labels
+def training_coins_database(data_dir,clf):
+    # features and labels
     features = []
     labels = []
-    # For each denomination directory
+    # For each directory
     for denomination_dir in glob.glob(os.path.join(data_dir, '*')):
-        # Get the denomination from the directory name
+        # Get denomination
         denomination = os.path.basename(denomination_dir)
         # print("Coin ",denomination)
         
-        # For each image in the denomination directory
+        # For each image  directory
         for img_path in glob.glob(os.path.join(denomination_dir, '*.jpg')) + glob.glob(os.path.join(denomination_dir, '*.jpeg'))+ glob.glob(os.path.join(denomination_dir, '*.png')):
             # Read the image
             img = preprocessed_input_coin_image(img_path)
-
 
             # Compute HOG features
             fd = hog(img, orientations=11, pixels_per_cell=(12, 12),
@@ -111,7 +109,7 @@ def training_coins_database(path,clf):
     accuracy = accuracy_score(y_test, y_pred)
     print(accuracy)
     # Save the trained model to disk
-    joblib.dump(clf, 'svm_model.pkl')
+    joblib.dump(clf, 'svm_model.pkl') 
     
 # The path to your coin images, organized into subdirectories by denomination
 data_dir = 'coins/'

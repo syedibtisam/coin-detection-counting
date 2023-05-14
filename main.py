@@ -6,7 +6,7 @@ from skimage.feature import hog
 import joblib
 
 
-clf = svm.SVC(decision_function_shape='ovo')
+# clf = svm.SVC(decision_function_shape='ovo')
 
 
 def predict_coin(grayImage):
