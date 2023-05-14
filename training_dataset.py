@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 from sklearn import svm, model_selection
 from skimage.feature import hog
+from sklearn.metrics import accuracy_score
+
 import os
 import glob
 import joblib
@@ -100,17 +102,20 @@ def training_coins_database(path,clf):
     labels = np.array(labels)
 
     # Split the data into a training set and a test set
-    X_train, X_test, y_train, y_test = model_selection.train_test_split(features, labels, test_size=0.05, random_state=42)
+    X_train, X_test, y_train, y_test = model_selection.train_test_split(features, labels, test_size=0.05, random_state=30)
 
     # Create and train an SVM
     # clf = svm.SVC(decision_function_shape='ovo')
     clf.fit(X_train, y_train)
+    y_pred = clf.predict(X_test)
+    accuracy = accuracy_score(y_test, y_pred)
+    print(accuracy)
     # Save the trained model to disk
     joblib.dump(clf, 'svm_model.pkl')
     
 # The path to your coin images, organized into subdirectories by denomination
 data_dir = 'coins/'
-path = "test_coin11.jpeg"
+# path = "test_coin11.jpeg"
 training_coins_database(data_dir,clf)
 
 # preprocessedImage = preprocessed_input_coin_image(path)
